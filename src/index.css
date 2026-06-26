@@ -61,29 +61,44 @@
     transform: translateY(0);
   }
 
-  /* Hero subtitle shimmer sweep — fires once on load */
-  .hero-shimmer {
-    position: relative;
-    display: inline-block;
-    background: linear-gradient(
-      90deg,
-      rgba(255,255,255,0.85) 0%,
-      rgba(255,255,255,0.85) 35%,
-      rgba(255,255,255,1)   48%,
-      rgba(200,210,255,1)   50%,
-      rgba(255,255,255,1)   52%,
-      rgba(255,255,255,0.85) 65%,
-      rgba(255,255,255,0.85) 100%
+  /* "AI Solutions" — gold flow, fires once */
+  .hero-ai-solutions {
+    display: inline;
+    background: linear-gradient(90deg,
+      #d97706 0%, #d97706 18%,
+      #fde68a 40%, #fffbeb 50%, #fde68a 60%,
+      #d97706 82%, #d97706 100%
     );
-    background-size: 250% 100%;
+    background-size: 300% 100%;
     background-position: 150% center;
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
-    animation: shimmerSweep 1.2s ease-out 0.6s 1 forwards;
+    animation: heroFlowGold 1.3s ease-out 0.7s 1 forwards;
   }
 
-  @keyframes shimmerSweep {
+  @keyframes heroFlowGold {
+    0%   { background-position: 150% center; }
+    100% { background-position: -50% center; }
+  }
+
+  /* "Business Growth" — emerald flow, fires once after gold */
+  .hero-biz-growth {
+    display: inline;
+    background: linear-gradient(90deg,
+      #059669 0%, #059669 18%,
+      #6ee7b7 40%, #d1fae5 50%, #6ee7b7 60%,
+      #059669 82%, #059669 100%
+    );
+    background-size: 300% 100%;
+    background-position: 150% center;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: heroFlowGreen 1.3s ease-out 1.0s 1 forwards;
+  }
+
+  @keyframes heroFlowGreen {
     0%   { background-position: 150% center; }
     100% { background-position: -50% center; }
   }

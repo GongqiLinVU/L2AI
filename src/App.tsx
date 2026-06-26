@@ -780,7 +780,10 @@ function HeroSection() {
           className="text-2xl md:text-3xl font-semibold mb-5 animate-fade-up"
           style={{ animationDelay: '0.1s' }}
         >
-          <span className="hero-shimmer">Practical AI Solutions for Business Growth</span>
+          <span className="text-slate-200">Practical </span>
+          <span className="hero-ai-solutions">AI Solutions</span>
+          <span className="text-slate-200"> for </span>
+          <span className="hero-biz-growth">Business Growth</span>
         </p>
 
         <p
