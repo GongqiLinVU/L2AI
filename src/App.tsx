@@ -772,15 +772,15 @@ function HeroSection() {
           Lin &amp; Lyn Holding Group
         </div>
 
-        <h1 className="text-7xl md:text-8xl lg:text-9xl font-black tracking-tight mb-6 animate-fade-up">
+        <h1 className="text-7xl md:text-8xl lg:text-9xl font-black tracking-tight mb-6 hero-l2ai-blink">
           <span className="text-gradient">L2AI</span>
         </h1>
 
         <p
-          className="text-2xl md:text-3xl font-semibold text-slate-200 mb-5 animate-fade-up"
+          className="text-2xl md:text-3xl font-semibold mb-5 animate-fade-up"
           style={{ animationDelay: '0.1s' }}
         >
-          Practical AI Solutions for Business Growth
+          <span className="hero-shimmer">Practical AI Solutions for Business Growth</span>
         </p>
 
         <p
@@ -1129,10 +1129,10 @@ function Footer() {
           © {new Date().getFullYear()} Lin &amp; Lyn Holding Group. All rights reserved.
         </p>
         <div className="flex items-center gap-5">
-          {['Solutions', 'Why L2AI', 'Contact'].map((label) => (
+          {([['Solutions', '#services'], ['Why L2AI', '#why'], ['Contact', '#contact']] as [string, string][]).map(([label, href]) => (
             <a
               key={label}
-              href={`#${label.toLowerCase().replace(' ', '')}`}
+              href={href}
               className="text-slate-500 hover:text-slate-300 text-sm transition-colors"
             >
               {label}
