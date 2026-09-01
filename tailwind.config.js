@@ -10,12 +10,19 @@ export default {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
       },
       colors: {
+        // Theme-adaptive foreground: near-white in dark mode, near-black in light mode.
+        // Use for text/borders/overlays that should flip with the theme; literal `white`
+        // is left untouched for text sitting on solid brand-colored buttons/badges.
+        ink: 'rgb(var(--ink-rgb) / <alpha-value>)',
         brand: {
           50:  '#eef2ff',
           100: '#e0e7ff',
           200: '#c7d2fe',
-          300: '#a5b4fc',
-          400: '#818cf8',
+          // 300/400 are used as *text* accents (taglines, links, icons) so they flip
+          // to a darker shade in light mode for contrast. 500+ stay fixed — they're
+          // solid button/badge backgrounds and look the same in either theme.
+          300: 'rgb(var(--brand-300-rgb) / <alpha-value>)',
+          400: 'rgb(var(--brand-400-rgb) / <alpha-value>)',
           500: '#6366f1',
           600: '#4f46e5',
           700: '#4338ca',
@@ -23,16 +30,30 @@ export default {
           900: '#312e81',
         },
         accent: {
-          400: '#34d399',
+          300: 'rgb(var(--accent-300-rgb) / <alpha-value>)',
+          400: 'rgb(var(--accent-400-rgb) / <alpha-value>)',
           500: '#10b981',
           600: '#059669',
         },
+        violet: {
+          300: 'rgb(var(--violet-300-rgb) / <alpha-value>)',
+        },
+        sky: {
+          300: 'rgb(var(--sky-300-rgb) / <alpha-value>)',
+        },
+        slate: {
+          200: 'rgb(var(--slate-200-rgb) / <alpha-value>)',
+          300: 'rgb(var(--slate-300-rgb) / <alpha-value>)',
+          400: 'rgb(var(--slate-400-rgb) / <alpha-value>)',
+          500: 'rgb(var(--slate-500-rgb) / <alpha-value>)',
+          600: 'rgb(var(--slate-600-rgb) / <alpha-value>)',
+        },
         surface: {
-          900: '#0a0a0f',
-          800: '#0f0f1a',
-          700: '#141428',
-          600: '#1a1a35',
-          500: '#22224a',
+          900: 'rgb(var(--surface-900-rgb) / <alpha-value>)',
+          800: 'rgb(var(--surface-800-rgb) / <alpha-value>)',
+          700: 'rgb(var(--surface-700-rgb) / <alpha-value>)',
+          600: 'rgb(var(--surface-600-rgb) / <alpha-value>)',
+          500: 'rgb(var(--surface-500-rgb) / <alpha-value>)',
         },
       },
       backgroundImage: {

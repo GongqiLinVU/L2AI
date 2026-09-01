@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useRef, useState, useCallback, type RefObject } from 'react'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -19,6 +19,7 @@ interface ValuePoint {
 }
 
 interface CaseStudy {
+  shortLabel: string
   category: string
   title: string
   description: string
@@ -155,6 +156,7 @@ const values: ValuePoint[] = [
 
 const caseStudies: CaseStudy[] = [
   {
+    shortLabel: 'Evaluation',
     category: 'Education / Assessment Intelligence',
     title: 'AI Project Evaluation Platform',
     description:
@@ -191,43 +193,45 @@ const caseStudies: CaseStudy[] = [
     badgeColor: 'bg-brand-500/15 text-brand-300 border-brand-500/25',
   },
   {
-    category: 'Education / Decision Support',
-    title: 'Smart Campus Decision Intelligence',
+    shortLabel: 'LegalFront',
+    category: 'Legal / Client Intake AI',
+    title: 'LegalFront — AI Client Intake Assistant',
     description:
-      'A campus-level decision intelligence system that helps universities understand student progress, project quality, resource needs, and teaching improvement opportunities.',
+      'An AI intake assistant for law firms that runs a short, structured conversation with website visitors, qualifies serious clients, and books a real consultation — so lawyers stop spending time on chats that never convert.',
     capabilities: [
-      'Student progress dashboard',
-      'Project milestone tracking',
-      'Risk early-warning',
-      'Resource recommendation',
-      'Teaching quality insights',
-      'Decision evidence reports',
+      '5-turn structured intake conversation',
+      'Case type & urgency classification',
+      'Lead qualification before human handoff',
+      'Consultation booking integration',
+      'Conversation summary for the lawyer',
+      'Filters out non-serious inquiries',
     ],
     businessValue: [
-      'Better academic decisions',
-      'Earlier intervention for at-risk students',
-      'Improved resource allocation',
-      'Stronger data-informed teaching management',
+      'Saves lawyers hours of unqualified chat time',
+      'Faster response to real, paying clients',
+      'Higher chat-to-booking conversion rate',
+      'Consistent, professional first impression',
     ],
     challenge:
-      'Universities often have fragmented information across classes, projects, systems, and staff observations.',
+      'Many visitors start a chat on a law firm’s website but never intend to book a paid consultation — lawyers end up spending significant time chatting before learning whether a lead is even real.',
     solution:
-      'L2AI connects data, evidence, AI reasoning, and human judgement into a decision support layer for academic teams.',
+      'L2AI designed a 5-turn AI intake flow that collects the essentials — case type, situation summary, urgency, and contact details — then routes qualified leads straight to booking a real consultation slot.',
     workflow: [
-      'Collect project and learning data',
-      'Detect risks and patterns',
-      'Generate decision recommendations',
-      'Academic staff review',
-      'Action planning',
-      'Outcome tracking',
+      'Visitor opens chat',
+      'AI asks 5 structured intake questions',
+      'AI classifies case type and urgency',
+      'Qualified lead prompted to book consultation',
+      'Consultation booked on lawyer’s calendar',
+      'Lawyer receives conversation summary',
     ],
     outcome:
-      'A smarter campus management process where decisions are supported by evidence, not scattered information.',
+      'Lawyers spend less time on chats that go nowhere and more time with real clients, while serious inquiries convert faster into booked consultations.',
     accentFrom: 'from-accent-600/15',
     accentTo: 'to-accent-900/5',
     badgeColor: 'bg-accent-500/15 text-accent-300 border-accent-500/25',
   },
   {
+    shortLabel: 'Compliance',
     category: 'Enterprise / Compliance AI',
     title: 'Enterprise Compliance Copilot',
     description:
@@ -265,6 +269,7 @@ const caseStudies: CaseStudy[] = [
     badgeColor: 'bg-violet-500/15 text-violet-300 border-violet-500/25',
   },
   {
+    shortLabel: 'Digital Human',
     category: 'Digital Engagement / AI Interface',
     title: 'Digital Human Experience Platform',
     description:
@@ -326,6 +331,57 @@ function useScrollReveal() {
   return ref
 }
 
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+
+/**
+ * Traps Tab/Shift+Tab focus inside `containerRef` while `active` is true,
+ * focuses the first focusable element on activation, and restores focus to
+ * whatever was focused beforehand once `active` goes false.
+ */
+function useFocusTrap(containerRef: RefObject<HTMLElement>, active: boolean) {
+  const previouslyFocused = useRef<HTMLElement | null>(null)
+
+  useEffect(() => {
+    if (!active) return
+    previouslyFocused.current = document.activeElement as HTMLElement | null
+
+    const container = containerRef.current
+    const focusFirst = () => {
+      const first = container?.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
+      first?.focus()
+    }
+    // Wait a tick so the enter-transition mount has settled before focusing.
+    const t = setTimeout(focusFirst, 20)
+
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab' || !container) return
+      const focusable = Array.from(
+        container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      ).filter((el) => el.offsetParent !== null)
+      if (focusable.length === 0) return
+
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
+    window.addEventListener('keydown', handleTab)
+    return () => {
+      clearTimeout(t)
+      window.removeEventListener('keydown', handleTab)
+      previouslyFocused.current?.focus()
+    }
+  }, [active, containerRef])
+}
+
 // ─── Service Modal ────────────────────────────────────────────────────────────
 
 function ServiceModal({
@@ -336,6 +392,7 @@ function ServiceModal({
   onClose: () => void
 }) {
   const [visible, setVisible] = useState(false)
+  const panelRef = useRef<HTMLDivElement>(null)
 
   // Trigger enter transition after mount
   useEffect(() => {
@@ -363,6 +420,8 @@ function ServiceModal({
     return () => window.removeEventListener('keydown', handleKey)
   }, [detail, handleKey])
 
+  useFocusTrap(panelRef, !!detail)
+
   if (!detail) return null
 
   return (
@@ -382,29 +441,30 @@ function ServiceModal({
 
       {/* Panel — bottom sheet on mobile, centered card on sm+ */}
       <div
+        ref={panelRef}
         className={`relative w-full sm:max-w-2xl max-h-[92vh] sm:max-h-[88vh] overflow-y-auto
           rounded-t-3xl sm:rounded-2xl
-          bg-surface-800 border border-white/10
+          bg-surface-800 border border-ink/10
           shadow-2xl shadow-black/60
           transition-all duration-300
           ${visible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}
       >
         {/* Drag handle (mobile) */}
         <div className="sm:hidden flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full bg-white/20" />
+          <div className="w-10 h-1 rounded-full bg-ink/20" />
         </div>
 
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 px-6 pt-5 pb-4 bg-surface-800/95 backdrop-blur-sm border-b border-white/8">
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 px-6 pt-5 pb-4 bg-surface-800/95 backdrop-blur-sm border-b border-ink/8">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-brand-600/20 border border-brand-500/25 flex items-center justify-center text-brand-300 text-xl flex-shrink-0">
               {detail.icon}
             </div>
-            <h2 className="text-white font-bold text-lg leading-tight">{detail.title}</h2>
+            <h2 className="text-ink font-bold text-lg leading-tight">{detail.title}</h2>
           </div>
           <button
             onClick={onClose}
-            className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors mt-0.5"
+            className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-ink hover:bg-ink/10 transition-colors mt-0.5"
             aria-label="Close"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -460,7 +520,7 @@ function ServiceModal({
           </div>
 
           {/* CTA */}
-          <div className="pt-2 border-t border-white/8">
+          <div className="pt-2 border-t border-ink/8">
             <a
               href="mailto:linlynholding@gmail.com"
               onClick={onClose}
@@ -488,6 +548,7 @@ function CaseStudyModal({
   onClose: () => void
 }) {
   const [visible, setVisible] = useState(false)
+  const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (study) {
@@ -512,6 +573,8 @@ function CaseStudyModal({
     return () => window.removeEventListener('keydown', handleKey)
   }, [study, handleKey])
 
+  useFocusTrap(panelRef, !!study)
+
   if (!study) return null
 
   return (
@@ -528,29 +591,30 @@ function CaseStudyModal({
 
       {/* Panel */}
       <div
+        ref={panelRef}
         className={`relative w-full sm:max-w-2xl max-h-[94vh] sm:max-h-[90vh] overflow-y-auto
           rounded-t-3xl sm:rounded-2xl
-          bg-surface-800 border border-white/10
+          bg-surface-800 border border-ink/10
           shadow-2xl shadow-black/70
           transition-all duration-300
           ${visible ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}
       >
         {/* Mobile drag handle */}
         <div className="sm:hidden flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 rounded-full bg-white/20" />
+          <div className="w-10 h-1 rounded-full bg-ink/20" />
         </div>
 
         {/* Sticky header */}
-        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 px-6 pt-5 pb-4 bg-surface-800/95 backdrop-blur-sm border-b border-white/8">
+        <div className="sticky top-0 z-10 flex items-start justify-between gap-4 px-6 pt-5 pb-4 bg-surface-800/95 backdrop-blur-sm border-b border-ink/8">
           <div className="flex flex-col gap-1.5">
             <span className={`self-start px-2.5 py-0.5 rounded-full border text-xs font-semibold ${study.badgeColor}`}>
               {study.category}
             </span>
-            <h2 className="text-white font-bold text-lg leading-tight">{study.title}</h2>
+            <h2 className="text-ink font-bold text-lg leading-tight">{study.title}</h2>
           </div>
           <button
             onClick={onClose}
-            className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors mt-0.5"
+            className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-ink hover:bg-ink/10 transition-colors mt-0.5"
             aria-label="Close"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -629,7 +693,7 @@ function CaseStudyModal({
           </div>
 
           {/* CTA */}
-          <div className="pt-2 border-t border-white/8">
+          <div className="pt-2 border-t border-ink/8">
             <a
               href="mailto:linlynholding@gmail.com"
               onClick={onClose}
@@ -649,7 +713,47 @@ function CaseStudyModal({
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
-function NavBar() {
+type Theme = 'dark' | 'light'
+
+function ThemeToggle({
+  theme,
+  onToggle,
+  className = '',
+}: {
+  theme: Theme
+  onToggle: () => void
+  className?: string
+}) {
+  return (
+    <button
+      onClick={onToggle}
+      aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+      className={`w-9 h-9 rounded-lg flex items-center justify-center text-slate-400 hover:text-ink hover:bg-ink/5 transition-colors ${className}`}
+    >
+      {theme === 'dark' ? (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="4" strokeWidth={2} />
+          <path
+            strokeLinecap="round"
+            strokeWidth={2}
+            d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"
+          />
+        </svg>
+      ) : (
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"
+          />
+        </svg>
+      )}
+    </button>
+  )
+}
+
+function NavBar({ theme, onToggleTheme }: { theme: Theme; onToggleTheme: () => void }) {
   const [scrolled, setScrolled] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
 
@@ -670,7 +774,7 @@ function NavBar() {
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
         scrolled
-          ? 'bg-surface-900/95 backdrop-blur-md border-b border-white/5 shadow-lg'
+          ? 'bg-surface-900/95 backdrop-blur-md border-b border-ink/5 shadow-lg'
           : 'bg-transparent'
       }`}
     >
@@ -679,7 +783,7 @@ function NavBar() {
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-brand-500/30">
             L2
           </div>
-          <span className="font-bold text-lg tracking-tight text-white">L2AI</span>
+          <span className="font-bold text-lg tracking-tight text-ink">L2AI</span>
         </a>
 
         <ul className="hidden md:flex items-center gap-1">
@@ -687,7 +791,7 @@ function NavBar() {
             <li key={l.href}>
               <a
                 href={l.href}
-                className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-white/5"
+                className="px-4 py-2 text-sm text-slate-400 hover:text-ink transition-colors rounded-lg hover:bg-ink/5"
               >
                 {l.label}
               </a>
@@ -695,17 +799,24 @@ function NavBar() {
           ))}
         </ul>
 
-        <a
-          href="#contact"
-          className="hidden md:inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-brand-600 hover:bg-brand-500 text-white transition-colors shadow-lg shadow-brand-600/20"
-        >
-          Contact Us
-        </a>
+        <div className="hidden md:flex items-center gap-2">
+          <ThemeToggle theme={theme} onToggle={onToggleTheme} />
+          <a
+            href="#contact"
+            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-brand-600 hover:bg-brand-500 text-white transition-colors shadow-lg shadow-brand-600/20"
+          >
+            Contact Us
+          </a>
+        </div>
 
+        <div className="flex items-center gap-1 md:hidden">
+        <ThemeToggle theme={theme} onToggle={onToggleTheme} />
         <button
-          className="md:hidden p-2 text-slate-400 hover:text-white"
+          className="p-2 text-slate-400 hover:text-ink"
           onClick={() => setMenuOpen(!menuOpen)}
           aria-label="Toggle menu"
+          aria-expanded={menuOpen}
+          aria-controls="mobile-menu"
         >
           {menuOpen ? (
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -717,17 +828,18 @@ function NavBar() {
             </svg>
           )}
         </button>
+        </div>
       </nav>
 
       {menuOpen && (
-        <div className="md:hidden bg-surface-800/98 backdrop-blur-lg border-b border-white/5 px-6 py-4">
+        <div id="mobile-menu" className="md:hidden bg-surface-800/98 backdrop-blur-lg border-b border-ink/5 px-6 py-4">
           <ul className="flex flex-col gap-1">
             {navLinks.map((l) => (
               <li key={l.href}>
                 <a
                   href={l.href}
                   onClick={() => setMenuOpen(false)}
-                  className="block px-4 py-3 text-sm text-slate-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                  className="block px-4 py-3 text-sm text-slate-300 hover:text-ink hover:bg-ink/5 rounded-lg transition-colors"
                 >
                   {l.label}
                 </a>
@@ -757,11 +869,12 @@ function HeroSection() {
     >
       <div className="absolute inset-0 bg-hero-gradient pointer-events-none" />
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_80%_80%,rgba(16,185,129,0.06)_0%,transparent_70%)] pointer-events-none" />
+      {/* Grid lines use the theme-adaptive `ink` color so they stay visible in light mode too */}
       <div
         className="absolute inset-0 pointer-events-none opacity-[0.03]"
         style={{
           backgroundImage:
-            'linear-gradient(rgba(255,255,255,0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.8) 1px, transparent 1px)',
+            'linear-gradient(rgb(var(--ink-rgb) / 0.8) 1px, transparent 1px), linear-gradient(90deg, rgb(var(--ink-rgb) / 0.8) 1px, transparent 1px)',
           backgroundSize: '64px 64px',
         }}
       />
@@ -809,7 +922,7 @@ function HeroSection() {
           </a>
           <a
             href="#contact"
-            className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl border border-white/15 hover:border-white/30 text-slate-200 hover:text-white font-semibold text-base transition-all duration-200 hover:bg-white/5"
+            className="inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl border border-ink/15 hover:border-ink/30 text-slate-200 hover:text-ink font-semibold text-base transition-all duration-200 hover:bg-ink/5"
           >
             Contact Us
           </a>
@@ -834,14 +947,14 @@ function ServicesSection() {
   const [activeService, setActiveService] = useState<ServiceData | null>(null)
 
   return (
-    <section id="services" className="py-28 px-6">
+    <section id="services" className="py-28 px-6 scroll-mt-20">
       <div className="max-w-7xl mx-auto">
         <div ref={ref} className="section-fade-in">
           <div className="text-center mb-16">
             <p className="text-brand-400 text-sm font-semibold uppercase tracking-widest mb-3">
               What We Do
             </p>
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
+            <h2 className="text-4xl md:text-5xl font-bold text-ink mb-4">
               AI Solutions That Drive{' '}
               <span className="text-gradient">Real Results</span>
             </h2>
@@ -862,11 +975,11 @@ function ServicesSection() {
                 </div>
 
                 <div>
-                  <h3 className="text-white font-semibold text-base mb-2">{svc.title}</h3>
+                  <h3 className="text-ink font-semibold text-base mb-2">{svc.title}</h3>
                   <p className="text-slate-400 text-sm leading-relaxed">{svc.description}</p>
                 </div>
 
-                <div className="mt-auto pt-4 border-t border-white/5">
+                <div className="mt-auto pt-4 border-t border-ink/5">
                   <button
                     onClick={() => setActiveService(svc)}
                     className="text-brand-400 hover:text-brand-300 text-xs font-medium flex items-center gap-1 group-hover:gap-2 transition-all"
@@ -892,7 +1005,7 @@ function WhySection() {
   const ref = useScrollReveal()
 
   return (
-    <section id="why" className="py-28 px-6 bg-surface-800/40">
+    <section id="why" className="py-28 px-6 bg-surface-800/40 scroll-mt-20">
       <div className="max-w-7xl mx-auto">
         <div ref={ref} className="section-fade-in">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
@@ -900,7 +1013,7 @@ function WhySection() {
               <p className="text-brand-400 text-sm font-semibold uppercase tracking-widest mb-3">
                 Why L2AI
               </p>
-              <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
+              <h2 className="text-4xl md:text-5xl font-bold text-ink mb-6 leading-tight">
                 Built for Business,{' '}
                 <span className="text-gradient">Powered by AI</span>
               </h2>
@@ -928,7 +1041,7 @@ function WhySection() {
                   <div className="text-brand-400 font-black text-xs tracking-widest mb-3 font-mono">
                     {v.icon}
                   </div>
-                  <h3 className="text-white font-semibold text-sm mb-2">{v.title}</h3>
+                  <h3 className="text-ink font-semibold text-sm mb-2">{v.title}</h3>
                   <p className="text-slate-400 text-xs leading-relaxed">{v.description}</p>
                 </div>
               ))}
@@ -943,90 +1056,82 @@ function WhySection() {
 function CaseStudiesSection() {
   const ref = useScrollReveal()
   const [activeStudy, setActiveStudy] = useState<CaseStudy | null>(null)
+  const [activeTab, setActiveTab] = useState(0)
+  const cs = caseStudies[activeTab]
 
   return (
-    <section id="usecases" className="py-28 px-6">
-      <div className="max-w-7xl mx-auto">
+    <section id="usecases" className="py-28 px-6 scroll-mt-20">
+      <div className="max-w-4xl mx-auto">
         <div ref={ref} className="section-fade-in">
           {/* Header */}
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <p className="text-brand-400 text-sm font-semibold uppercase tracking-widest mb-3">
               Proven AI Applications
             </p>
-            <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-              AI That{' '}
-              <span className="text-gradient">Gets Things Done</span>
+            <h2 className="text-4xl md:text-5xl font-bold text-ink mb-4">
+              <span className="text-gradient">Case Studies</span>
             </h2>
             <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-              Practical AI systems designed for education, enterprise operations, compliance, and digital engagement.
+              Click any tab for the full breakdown.
             </p>
           </div>
 
-          {/* Cards — 2-col grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {caseStudies.map((cs, i) => (
-              <div
-                key={cs.title}
-                className={`group relative rounded-2xl bg-gradient-to-br ${cs.accentFrom} ${cs.accentTo} bg-surface-800 card-border card-border-hover p-7 flex flex-col gap-5`}
-                style={{ animationDelay: `${i * 0.08}s` }}
+          {/* Tab bar */}
+          <div
+            role="tablist"
+            aria-label="Case studies"
+            className="flex flex-wrap justify-center gap-2 mb-6"
+          >
+            {caseStudies.map((tab, i) => (
+              <button
+                key={tab.title}
+                role="tab"
+                aria-selected={i === activeTab}
+                onClick={() => setActiveTab(i)}
+                className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
+                  i === activeTab
+                    ? 'bg-brand-600 text-white shadow-lg shadow-brand-600/25'
+                    : 'text-slate-400 hover:text-ink bg-ink/5 hover:bg-ink/10'
+                }`}
               >
-                {/* Top row: badge + arrow */}
-                <div className="flex items-start justify-between gap-3">
-                  <span className={`px-2.5 py-1 rounded-full border text-xs font-semibold leading-none ${cs.badgeColor}`}>
-                    {cs.category}
-                  </span>
-                  <div className="w-7 h-7 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-slate-500 group-hover:text-white group-hover:border-white/20 transition-colors flex-shrink-0">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 17L17 7M17 7H7M17 7v10" />
-                    </svg>
-                  </div>
-                </div>
-
-                {/* Title + description */}
-                <div>
-                  <h3 className="text-white font-bold text-xl mb-2 leading-snug">{cs.title}</h3>
-                  <p className="text-slate-400 text-sm leading-relaxed">{cs.description}</p>
-                </div>
-
-                {/* Capability tags — show first 3 */}
-                <div className="flex flex-wrap gap-2">
-                  {cs.capabilities.slice(0, 3).map((cap) => (
-                    <span
-                      key={cap}
-                      className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/8 text-slate-400 text-xs"
-                    >
-                      {cap}
-                    </span>
-                  ))}
-                  {cs.capabilities.length > 3 && (
-                    <span className="px-2.5 py-1 rounded-lg bg-white/5 border border-white/8 text-slate-500 text-xs">
-                      +{cs.capabilities.length - 3} more
-                    </span>
-                  )}
-                </div>
-
-                {/* Business value highlight — first item */}
-                <div className="flex items-start gap-2.5 rounded-xl bg-black/20 border border-white/6 px-4 py-3">
-                  <svg className="w-4 h-4 text-accent-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                  </svg>
-                  <span className="text-slate-300 text-xs leading-relaxed">{cs.businessValue[0]}</span>
-                </div>
-
-                {/* CTA */}
-                <div className="mt-auto pt-1">
-                  <button
-                    onClick={() => setActiveStudy(cs)}
-                    className="flex items-center gap-1.5 text-brand-400 hover:text-brand-300 text-xs font-semibold group-hover:gap-2.5 transition-all"
-                  >
-                    View case study
-                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
+                {tab.shortLabel}
+              </button>
             ))}
+          </div>
+
+          {/* Active panel */}
+          <div
+            key={cs.title}
+            className={`rounded-2xl bg-gradient-to-br ${cs.accentFrom} ${cs.accentTo} bg-surface-800 card-border p-7 flex flex-col gap-5 animate-fade-in`}
+          >
+            <div>
+              <span className={`inline-block mb-3 px-2.5 py-1 rounded-full border text-xs font-semibold leading-none ${cs.badgeColor}`}>
+                {cs.category}
+              </span>
+              <h3 className="text-ink font-bold text-xl mb-2 leading-snug">{cs.title}</h3>
+              <p className="text-slate-400 text-sm leading-relaxed">{cs.description}</p>
+            </div>
+
+            {/* Business value highlight — first item */}
+            <div className="flex items-start gap-2.5 rounded-xl bg-ink/5 border border-ink/6 px-4 py-3">
+              <svg className="w-4 h-4 text-accent-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+              <span className="text-slate-300 text-xs leading-relaxed">{cs.businessValue[0]}</span>
+            </div>
+
+            {/* CTA */}
+            <div>
+              <button
+                onClick={() => setActiveStudy(cs)}
+                className="flex items-center gap-1.5 text-brand-400 hover:text-brand-300 text-xs font-semibold hover:gap-2.5 transition-all"
+              >
+                Click for details
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1040,29 +1145,53 @@ function AboutSection() {
   const ref = useScrollReveal()
 
   return (
-    <section id="about" className="py-28 px-6 bg-surface-800/40">
-      <div className="max-w-5xl mx-auto">
-        <div ref={ref} className="section-fade-in text-center">
-          <p className="text-brand-400 text-sm font-semibold uppercase tracking-widest mb-3">
+    <section id="about" className="relative py-32 px-6 overflow-hidden scroll-mt-20">
+      {/* Soft twin glows — the only "case study" this section makes is a visual one */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute left-1/2 top-0 -translate-x-1/2 w-[560px] h-[560px] rounded-full bg-brand-500/10 blur-3xl" />
+        <div className="absolute right-[10%] bottom-0 w-[380px] h-[380px] rounded-full bg-accent-500/10 blur-3xl" />
+      </div>
+
+      <div className="relative z-10 max-w-3xl mx-auto text-center">
+        <div ref={ref} className="section-fade-in">
+          <p className="text-brand-400 text-sm font-semibold uppercase tracking-widest mb-6">
             About Us
           </p>
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-8">
-            Lin &amp; Lyn Holding Group
-          </h2>
-          <div className="flex items-center justify-center gap-4 mb-10">
-            <div className="h-px flex-1 max-w-xs bg-gradient-to-r from-transparent to-brand-500/40" />
+
+          <blockquote className="text-3xl md:text-5xl font-bold leading-tight text-ink mb-8">
+            We don&rsquo;t build AI to impress.
+            <br />
+            <span className="text-gradient">We build AI that works.</span>
+          </blockquote>
+
+          <div className="flex items-center justify-center gap-3 mb-12">
             <div className="glow-dot" />
-            <div className="h-px flex-1 max-w-xs bg-gradient-to-l from-transparent to-brand-500/40" />
+            <p className="text-slate-500 text-sm">
+              Lin &amp; Lyn Holding Group — the team behind{' '}
+              <span className="text-ink font-semibold">L2AI</span>
+            </p>
           </div>
-          <p className="text-slate-300 text-lg md:text-xl leading-relaxed max-w-3xl mx-auto mb-6">
-            Lin &amp; Lyn Holding Group focuses on AI-driven business innovation, education technology,
-            and decision intelligence. Through <strong className="text-white">L2AI</strong>, we help organisations
-            explore, prototype, and deploy practical AI solutions that create lasting operational value.
-          </p>
-          <p className="text-slate-500 text-base leading-relaxed max-w-2xl mx-auto">
-            We believe the most powerful AI is the kind that makes your existing people and processes
-            smarter — not the kind that replaces them.
-          </p>
+
+          {/* Credibility strip — quiet facts, not another case-study recap */}
+          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3 mb-7">
+            <span className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+              Est. 2023 · Melbourne, Australia
+            </span>
+            <span className="hidden sm:inline text-ink/15">|</span>
+            <span className="text-xs font-semibold uppercase tracking-widest text-slate-500">
+              AI Experts &amp; Dedicated Research Team
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center justify-center gap-2.5">
+            {['Universities', 'Law Firms', 'Accounting Firms', 'Overseas Enterprises'].map((p) => (
+              <span
+                key={p}
+                className="px-3.5 py-1.5 rounded-full border border-ink/10 bg-ink/5 text-slate-400 text-xs font-medium"
+              >
+                {p}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
     </section>
@@ -1073,14 +1202,14 @@ function ContactSection() {
   const ref = useScrollReveal()
 
   return (
-    <section id="contact" className="py-28 px-6 relative overflow-hidden">
+    <section id="contact" className="py-28 px-6 relative overflow-hidden scroll-mt-20">
       <div className="absolute inset-0 bg-glow-indigo pointer-events-none" />
       <div className="relative z-10 max-w-3xl mx-auto">
         <div ref={ref} className="section-fade-in text-center">
           <p className="text-brand-400 text-sm font-semibold uppercase tracking-widest mb-4">
             Get In Touch
           </p>
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight">
+          <h2 className="text-4xl md:text-5xl font-bold text-ink mb-6 leading-tight">
             Let's Build Practical AI{' '}
             <span className="text-gradient">Together.</span>
           </h2>
@@ -1097,7 +1226,7 @@ function ContactSection() {
               <p className="text-slate-400 text-sm mb-1">Email us at</p>
               <a
                 href="mailto:linlynholding@gmail.com"
-                className="text-white font-semibold text-xl hover:text-brand-300 transition-colors"
+                className="text-ink font-semibold text-xl hover:text-brand-300 transition-colors"
               >
                 linlynholding@gmail.com
               </a>
@@ -1120,13 +1249,13 @@ function ContactSection() {
 
 function Footer() {
   return (
-    <footer className="border-t border-white/5 py-10 px-6">
+    <footer className="border-t border-ink/5 py-10 px-6">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-500 to-accent-500 flex items-center justify-center text-white font-black text-xs shadow-md shadow-brand-500/20">
             L2
           </div>
-          <span className="font-bold text-base text-white">L2AI</span>
+          <span className="font-bold text-base text-ink">L2AI</span>
         </div>
         <p className="text-slate-600 text-sm text-center">
           © {new Date().getFullYear()} Lin &amp; Lyn Holding Group. All rights reserved.
@@ -1150,9 +1279,30 @@ function Footer() {
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function App() {
+  const [theme, setTheme] = useState<Theme>(() => {
+    try {
+      return (localStorage.getItem('l2ai-theme') as Theme | null) ?? 'light'
+    } catch {
+      return 'light'
+    }
+  })
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    try {
+      localStorage.setItem('l2ai-theme', theme)
+    } catch {
+      /* localStorage unavailable (private mode, etc.) — theme just won't persist */
+    }
+  }, [theme])
+
+  const toggleTheme = useCallback(() => {
+    setTheme((t) => (t === 'dark' ? 'light' : 'dark'))
+  }, [])
+
   return (
-    <div className="min-h-screen bg-surface-900 text-white">
-      <NavBar />
+    <div className="min-h-screen bg-surface-900 text-ink">
+      <NavBar theme={theme} onToggleTheme={toggleTheme} />
       <main>
         <HeroSection />
         <ServicesSection />

@@ -2,6 +2,63 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Theme tokens — light is the default (bare :root), dark is an explicit
+ * opt-in via [data-theme="dark"] on <html> (set by the theme toggle in
+ * NavBar and persisted to localStorage). Values are "R G B" triples so
+ * Tailwind's `rgb(var(--x) / <alpha-value>)` colors (see tailwind.config.js)
+ * get opacity-modifier support for free.
+ */
+:root {
+  --ink-rgb: 15 23 42;
+
+  --surface-900-rgb: 255 255 255;
+  --surface-800-rgb: 246 247 250;
+  --surface-700-rgb: 237 239 245;
+  --surface-600-rgb: 226 229 238;
+  --surface-500-rgb: 214 218 232;
+
+  /* Prominence order is preserved (200 = most prominent … 600 = most subtle),
+     values are just inverted so they stay readable on a light background. */
+  --slate-200-rgb: 15 23 42;
+  --slate-300-rgb: 51 65 85;
+  --slate-400-rgb: 71 85 105;
+  --slate-500-rgb: 100 116 139;
+  --slate-600-rgb: 148 163 184;
+
+  /* Text-accent shades darken for AA contrast on white; solid button/badge
+     backgrounds (brand-500/600 etc.) are untouched and look the same. */
+  --brand-300-rgb: 67 56 202;
+  --brand-400-rgb: 79 70 229;
+  --accent-300-rgb: 5 150 105;
+  --accent-400-rgb: 4 120 87;
+  --violet-300-rgb: 109 40 217;
+  --sky-300-rgb: 3 105 161;
+}
+
+:root[data-theme='dark'] {
+  --ink-rgb: 255 255 255;
+
+  --surface-900-rgb: 10 10 15;
+  --surface-800-rgb: 15 15 26;
+  --surface-700-rgb: 20 20 40;
+  --surface-600-rgb: 26 26 53;
+  --surface-500-rgb: 34 34 74;
+
+  --slate-200-rgb: 226 232 240;
+  --slate-300-rgb: 203 213 225;
+  --slate-400-rgb: 148 163 184;
+  --slate-500-rgb: 100 116 139;
+  --slate-600-rgb: 71 85 105;
+
+  --brand-300-rgb: 165 180 252;
+  --brand-400-rgb: 129 140 248;
+  --accent-300-rgb: 110 231 183;
+  --accent-400-rgb: 52 211 153;
+  --violet-300-rgb: 196 181 253;
+  --sky-300-rgb: 125 211 252;
+}
+
 @layer base {
   html {
     scroll-behavior: smooth;
@@ -10,8 +67,9 @@
   }
 
   body {
-    @apply bg-surface-900 text-white;
+    @apply bg-surface-900 text-ink;
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
 
   * {
@@ -118,5 +176,24 @@
     65%  { filter: drop-shadow(0 0 4px rgba(99,102,241,0.2)); }
     82%  { filter: drop-shadow(0 0 18px rgba(99,102,241,0.7)) drop-shadow(0 0 32px rgba(99,102,241,0.35)); }
     100% { filter: drop-shadow(0 0 0px rgba(99,102,241,0)); }
+  }
+}
+
+/* Respect reduced-motion preference: kill decorative animations, keep content visible */
+@media (prefers-reduced-motion: reduce) {
+  .hero-ai-solutions,
+  .hero-biz-growth,
+  .hero-l2ai-blink,
+  .animate-fade-in,
+  .animate-fade-up,
+  .animate-bounce,
+  .section-fade-in {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    -webkit-text-fill-color: initial !important;
+    background: none !important;
+    color: inherit;
   }
 }
